@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Zombie Shooter</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: black;
+        }
+
+        html,
+        body {
+            overflow: hidden;
+        }
+
+        #drawingArea {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .zombie {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: green;
+            background-size: cover;
+        }
+
+        .touchArea {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        #touchAreaRed {
+            border-top: 1px red solid;
+            border-left: 1px red solid;
+            top: 50%;
+            left: 50%;
+        }
+
+        #touchAreaBlue {
+            border-bottom: 1px blue solid;
+            border-right: 1px blue solid;
+            top: 0;
+            left: 0;
+        }
+
+        #touchAreaGreen {
+            border-top: 1px green solid;
+            border-right: 1px green solid;
+            top: 50%;
+            left: 0;
+        }
+
+        #touchAreaYellow {
+            border-bottom: 1px yellow solid;
+            border-left: 1px yellow solid;
+            top: 0;
+            left: 50%;
+        }
+
+        .crosshair {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-size: cover;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        #crosshairRed {
+            border: 1px solid red;
+        }
+
+        #crosshairBlue {
+            border: 1px solid blue;
+        }
+
+        #crosshairGreen {
+            border: 1px solid green;
+        }
+
+        #crosshairYellow {
+            border: 1px solid yellow;
+        }
+
+        .score {
+            position: fixed;
+            font-size: 20px;
+            z-index: 30;
+            color: white;
+        }
+
+        #scoreRed {
+            top: 10px;
+            left: 10px;
+        }
+
+        #scoreBlue {
+            top: 10px;
+            right: 10px;
+        }
+
+        #scoreGreen {
+            bottom: 10px;
+            left: 10px;
+        }
+
+        #scoreYellow {
+            bottom: 10px;
+            right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="drawingArea"></div>
+    <div id="touchAreaRed" class="touchArea"></div>
+    <div id="touchAreaBlue" class="touchArea"></div>
+    <div id="touchAreaGreen" class="touchArea"></div>
+    <div id="touchAreaYellow" class="touchArea"></div>
+    <div id="crosshairRed" class="crosshair"></div>
+    <div id="crosshairBlue" class="crosshair"></div>
+    <div id="crosshairGreen" class="crosshair"></div>
+    <div id="crosshairYellow" class="crosshair"></div>
+    <div id="scoreRed" class="score">Zombies Red: 0</div>
+    <div id="scoreBlue" class="score">Zombies Blue: 0</div>
+    <div id="scoreGreen" class="score">Zombies Green: 0</div>
+    <div id="scoreYellow" class="score">Zombies Yellow: 0</div>
+
+    <script>
+        const touchAreas = document.querySelectorAll('.touchArea');
+        const crosshairs = {
+            'touchAreaRed': document.getElementById('crosshairRed'),
+            'touchAreaBlue': document.getElementById('crosshairBlue'),
+            'touchAreaGreen': document.getElementById('crosshairGreen'),
+            'touchAreaYellow': document.getElementById('crosshairYellow')
+        };
+        const scores = {
+            'touchAreaRed': document.getElementById('scoreRed'),
+            'touchAreaBlue': document.getElementById('scoreBlue'),
+            'touchAreaGreen': document.getElementById('scoreGreen'),
+            'touchAreaYellow': document.getElementById('scoreYellow')
+        };
+        const drawingArea = document.getElementById('drawingArea');
+        const zombieCount = {
+            'touchAreaRed': 0,
+            'touchAreaBlue': 0,
+            'touchAreaGreen': 0,
+            'touchAreaYellow': 0
+        };
+
+        function createZombie(x, y) {
+            const zombie = document.createElement('div');
+            zombie.className = 'zombie';
+            zombie.style.left = `${x}px`;
+            zombie.style.top = `${y}px`;
+            drawingArea.appendChild(zombie);
+
+            return zombie;
+        }
+
+        function generateRandomZombie() {
+            const x = Math.random() * (window.innerWidth - 50); // Ajusta el 50 para el tamaño del zombi
+            const y = Math.random() * (window.innerHeight - 50);
+            return createZombie(x, y);
+        }
+
+        function updateScore(areaId) {
+            zombieCount[areaId]++;
+            scores[areaId].textContent = `Zombies ${areaId.replace('touchArea', '')}: ${zombieCount[areaId]}`;
+        }
+
+        function checkCollision(crosshair, zombie) {
+            const crosshairRect = crosshair.getBoundingClientRect();
+            const zombieRect = zombie.getBoundingClientRect();
+
+            return !(
+                crosshairRect.right < zombieRect.left ||
+                crosshairRect.left > zombieRect.right ||
+                crosshairRect.bottom < zombieRect.top ||
+                crosshairRect.top > zombieRect.bottom
+            );
+        }
+
+        const crosshairPositions = {};
+
+        function handleTouchMove(event) {
+            event.preventDefault(); // Evitar comportamientos predeterminados
+
+            for (let i = 0; i < event.touches.length; i++) {
+                const touch = event.touches[i];
+                const targetArea = document.elementFromPoint(touch.clientX, touch.clientY);
+                const crosshair = crosshairs[targetArea.id];
+                const rect = targetArea.getBoundingClientRect();
+
+                if (crosshair) {
+                    const xPos = (touch.clientX - rect.left) * 2 - 20;
+                    const yPos = (touch.clientY - rect.top) * 2 - 20;
+
+                    crosshairPositions[targetArea.id] = { xPos, yPos };
+
+                    // Optimizar el movimiento del crosshair utilizando requestAnimationFrame
+                    requestAnimationFrame(() => {
+                        crosshair.style.transform = `translate(${xPos}px, ${yPos}px)`;
+
+                        const zombies = document.querySelectorAll('.zombie');
+                        zombies.forEach(zombie => {
+                            if (checkCollision(crosshair, zombie)) {
+                                zombie.remove();
+                                generateRandomZombie();
+                                updateScore(targetArea.id);
+                            }
+                        });
+                    });
+                }
+            }
+        }
+
+        touchAreas.forEach(area => {
+            area.addEventListener('touchmove', handleTouchMove);
+        });
+
+        for (let i = 0; i < 5; i++) {
+            generateRandomZombie();
+        }
+    </script>
+</body>
+
+</html>
